@@ -32,6 +32,19 @@ curl http://127.0.0.1:5000/demo
 #  public | schema_migrations | table    | postgres
 # (3 rows)
 
+# run some tests
+./build/run.sh test
+# Starting demo-db ... done
+# Starting demo                           ... done
+# Starting docker-go-demo-app_migration_1 ... done
+# ...
+# === RUN   TestIntegration_QueryDB
+# --- PASS: TestIntegration_QueryDB (0.02s)
+# PASS
+# ok  	github.com/chtorr/docker-go-demo-app/src	0.023s
+# Stopping demo    ... done
+# Stopping demo-db ... done
+
 # notice the user defined network name
 docker network ls
 # NETWORK ID          NAME                          DRIVER              SCOPE
@@ -41,7 +54,7 @@ docker network ls
 # ...
 ```
 
-Docker compose will keep a data volume around after stopping.  To fully reset everything:
+Docker compose will keep the postgres data volume around after stopping.  To fully reset everything:
 ```sh
 ./build/run.sh clean
 ```

@@ -1,0 +1,21 @@
+version: '3'
+services:
+  tester:
+    image: golang:1.10-alpine
+    environment:
+      - SERVICE_NAME=demo
+    volumes:
+      - .:/go/src/github.com/chtorr/docker-go-demo-app
+    networks:
+      - internal
+
+  db-wait:
+    image: postgres
+    environment:
+        - PGPASSWORD=postgres
+        - PGUSER=postgres
+    networks:
+      - internal
+
+networks:
+  internal: {}

@@ -14,19 +14,23 @@ const (
 	port = ":8080"
 )
 
-func main() {
-
+func getServiceName() (string, error) {
 	// Grab the service name from the environment
 	serviceName := os.Getenv("SERVICE_NAME")
 	if serviceName == "" {
-		log.Fatalf("SERVICE_NAME env var must be set")
+		return "", fmt.Errorf("SERVICE_NAME env var must be set")
+	}
+	return serviceName, nil
+}
+
+func main() {
+
+	serviceName, err := getServiceName()
+	if err != nil {
+		log.Fatal(err)
 	}
 
-	// Build up the DB hose and name and connect to it
-	dbHost := fmt.Sprintf("%s-db", serviceName)
-	dbName := serviceName
-	connStr := fmt.Sprintf("postgres://postgres:postgres@%s:5432/%s?sslmode=disable", dbHost, dbName)
-	db, err := sql.Open("postgres", connStr)
+	db, err := getDB(serviceName)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -37,7 +41,7 @@ func main() {
 		fmt.Fprintf(w, "Hello from %s", serviceName)
 	})
 
-	// Query the time on the db and return (to test connectivity)
+	// Query some data from the db and return (to test connectivity and migrations)
 	http.HandleFunc("/demo", func(w http.ResponseWriter, r *http.Request) {
 		log.Println("Handling request for /demo")
 
@@ -54,6 +58,14 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
+}
+
+func getDB(serviceName string) (*sql.DB, error) {
+	// Build up the DB hose and name and connect to it
+	dbHost := fmt.Sprintf("%s-db", serviceName)
+	dbName := serviceName
+	connStr := fmt.Sprintf("postgres://postgres:postgres@%s:5432/%s?sslmode=disable", dbHost, dbName)
+	return sql.Open("postgres", connStr)
 }
 
 func queryDB(db *sql.DB) (string, error) {
