@@ -1,0 +1,11 @@
+FROM migrate/migrate
+RUN apk add --no-cache bash postgresql-client
+
+# add a helper script for local development to wait for postgres to be ready
+ADD build/wait-for-postgres.sh /wait-for-postgres.sh
+RUN chmod +x /wait-for-postgres.sh
+
+# add the migration files
+ADD migration /migration
+
+# use the original container entrypoint of /migrate by default

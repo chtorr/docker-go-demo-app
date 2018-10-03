@@ -1,0 +1,44 @@
+version: '3'
+services:
+  web:
+    build: .
+    environment:
+      - SERVICE_NAME=demo
+    ports:
+     - "5000:8080"
+    depends_on:
+      - db
+    container_name: demo
+    networks:
+      internal:
+        aliases:
+          - demo # connect this container to the "internal" network and register the "demo" DNS alias
+
+  migration:
+    build:
+      dockerfile: Dockerfile.migration
+      context: .
+    depends_on:
+      - db
+    environment:
+        - POSTGRES_PASSWORD=postgres
+    entrypoint: []
+    command: ["./wait-for-postgres.sh", "demo-db", "--", "/migrate", "-path=/migration/", "-database", "postgres://postgres:postgres@demo-db:5432/demo?sslmode=disable", "up"]
+    networks:
+      - internal # connect to the internal network but don't provide an alias as nothing talks to this container
+
+  db:
+    image: postgres
+    volumes:
+      - ./tmp/pgdata:/var/lib/postgresql/data # save postgres data on the host
+    environment:
+        - POSTGRES_DB=demo
+        - POSTGRES_PASSWORD=postgres
+    container_name: demo-db
+    networks:
+      internal:
+        aliases:
+          - demo-db # make the db available as "demo-db"
+
+networks:
+  internal: {}
