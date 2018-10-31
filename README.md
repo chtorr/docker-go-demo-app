@@ -58,3 +58,21 @@ Docker compose will keep the postgres data volume around after stopping.  To ful
 ```sh
 ./build/run.sh clean
 ```
+
+
+# test out traefik
+
+```sh
+docker-compose -f docker-compose-traefik.yml up
+
+# in another terminal
+
+curl localhost:5000
+# Hello from demo
+
+curl localhost:5000/demo
+# Value from postgres: test name
+
+curl localhost:5000/remote?service=demo2.docker.localhost
+# Msg from remote (demo2.docker.localhost): Hello from demo2
+```

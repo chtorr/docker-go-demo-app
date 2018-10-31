@@ -3,6 +3,7 @@ package main
 import (
 	"database/sql"
 	"fmt"
+	"io/ioutil"
 	"log"
 	"net/http"
 	"os"
@@ -11,7 +12,9 @@ import (
 )
 
 const (
-	port = ":8080"
+	port          = ":8080"
+	proxyHostName = "proxy"
+	proxyPort     = "80"
 )
 
 func getServiceName() (string, error) {
@@ -53,11 +56,55 @@ func main() {
 		fmt.Fprintf(w, "Value from postgres: %s", t)
 	})
 
+	// Return a simple message from another HTTP service
+	http.HandleFunc("/remote", func(w http.ResponseWriter, r *http.Request) {
+		log.Println("Handling request for /remote")
+
+		remote := r.URL.Query().Get("service")
+		if remote == "" {
+			http.Error(w, "service name must be provided", http.StatusBadRequest)
+			return
+		}
+
+		resp, err := queryRemote(remote)
+		if err != nil {
+			http.Error(w, fmt.Sprintf("error requesting from remote: %v", err), http.StatusBadRequest)
+			return
+		}
+
+		fmt.Fprintf(w, "Msg from remote (%s): %s", remote, resp)
+	})
+
 	log.Printf("Starting web server on port %s", port)
 	err = http.ListenAndServe(port, nil)
 	if err != nil {
 		log.Fatal(err)
 	}
+}
+
+func queryRemote(serviceName string) (string, error) {
+	client := http.Client{}
+
+	url := fmt.Sprintf("http://%s:%s", proxyHostName, proxyPort)
+	req, err := http.NewRequest("GET", url, nil)
+	req.Host = serviceName
+	if err != nil {
+		return "", err
+	}
+
+	resp, err := client.Do(req)
+	if err != nil {
+		return "", err
+	}
+	defer resp.Body.Close()
+
+	body, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		return "", err
+	}
+
+	return string(body), nil
+
 }
 
 func getDB(serviceName string) (*sql.DB, error) {

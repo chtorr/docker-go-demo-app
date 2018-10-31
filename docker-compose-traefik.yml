@@ -1,0 +1,71 @@
+version: '3'
+services:
+  web:
+    build: .
+    environment:
+      - SERVICE_NAME=demo
+    ports:
+     - "5000:8080"
+    depends_on:
+      - db
+    container_name: demo
+    labels:
+      - "traefik.frontend.rule=Host:demo.docker.localhost"
+    networks:
+      - internal
+
+  # run a second copy of the service, don't bother with another db
+  web2:
+    build: .
+    environment:
+      - SERVICE_NAME=demo2
+    ports:
+     - "5001:8080"
+    container_name: demo2
+    labels:
+      - "traefik.frontend.rule=Host:demo2.docker.localhost"
+    networks:
+      - internal
+
+  migration:
+    build:
+      dockerfile: Dockerfile.migration
+      context: .
+    depends_on:
+      - db
+    environment:
+        - POSTGRES_PASSWORD=postgres
+    entrypoint: []
+    command: ["./wait-for-postgres.sh", "demo-db", "--", "/migrate", "-path=/migration/", "-database", "postgres://postgres:postgres@demo-db:5432/demo?sslmode=disable", "up"]
+    networks:
+      - internal # connect to the internal network but don't provide an alias as nothing talks to this container
+
+  db:
+    image: postgres
+    volumes:
+      - ./tmp/pgdata:/var/lib/postgresql/data # save postgres data on the host
+    environment:
+        - POSTGRES_DB=demo
+        - POSTGRES_PASSWORD=postgres
+    container_name: demo-db
+    networks:
+      internal:
+        aliases:
+          - demo-db # make the db available as "demo-db"
+
+  proxy:
+    image: traefik # The official Traefik docker image
+    command: --api --docker --docker.domain=docker.localhost --logLevel="DEBUG" # Enables the web UI and tells Træfik to listen to docker
+    ports:
+      - "80:80"     # The HTTP port
+      - "8080:8080" # The Web UI (enabled by --api)
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock # So that Traefik can listen to the Docker events
+    networks:
+      internal:
+        aliases:
+          - proxy
+
+
+networks:
+  internal: {}
