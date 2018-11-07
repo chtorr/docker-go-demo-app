@@ -18,5 +18,22 @@ jobs:
     steps:
       - setup_remote_docker
       - checkout
+      - run:
+          name: Install Docker client
+          command: |
+            set -x
+            VER="17.03.0-ce"
+            curl -L -o /tmp/docker-$VER.tgz https://download.docker.com/linux/static/stable/x86_64/docker-$VER.tgz
+            tar -xz -C /tmp -f /tmp/docker-$VER.tgz
+            mv /tmp/docker/* /usr/bin
       - run: docker build -t chtorr/docker-go-demo-app .
-      - run: ./build/run test
+      - run: 
+          command: Run Tests
+          command: |
+            docker-compose up --build -d
+            until docker-compose -f docker-compose-test.yml run db-wait psql -q -h "demo-db" -c '\q'; do
+                >&2 echo "Postgres is unavailable - sleeping"
+                sleep 2
+            done
+            echo "Postgres is ready"
+            docker-compose -f docker-compose-test.yml run tester go test -v ./...
