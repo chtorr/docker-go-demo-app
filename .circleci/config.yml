@@ -28,7 +28,7 @@ jobs:
             mv /tmp/docker/* /usr/bin
       - run: docker build -t chtorr/docker-go-demo-app .
       - run: 
-          command: Run Tests
+          name: Run Tests
           command: |
             docker-compose up --build -d
             until docker-compose -f docker-compose-test.yml run db-wait psql -q -h "demo-db" -c '\q'; do
